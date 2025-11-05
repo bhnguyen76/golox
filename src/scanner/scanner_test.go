@@ -5,26 +5,6 @@ import (
 	"example.com/golox/src/shared"
 )
 
-func TestScanSimpleParens(t *testing.T) {
-	s := NewScanner("()")
-	tokens := s.ScanTokens()
-
-	// Expect: LEFT_PAREN, RIGHT_PAREN, EOF
-	if len(tokens) != 3 {
-		t.Fatalf("expected 3 tokens, got %d: %v", len(tokens), tokens)
-	}
-
-	if tokens[0].Type != LEFT_PAREN {
-		t.Errorf("expected first token LEFT_PAREN, got %v", tokens[0].Type)
-	}
-	if tokens[1].Type != RIGHT_PAREN {
-		t.Errorf("expected second token RIGHT_PAREN, got %v", tokens[1].Type)
-	}
-	if tokens[2].Type != EOF {
-		t.Errorf("expected third token EOF, got %v", tokens[2].Type)
-	}
-}
-
 type expectedToken struct {
 	typ    TokenType
 	lexeme string
@@ -62,6 +42,13 @@ func checkTokens(t *testing.T, src string, want []expectedToken) {
 	if toks[len(toks)-1].Type != EOF {
 		t.Errorf("last token type = %v, want EOF", toks[len(toks)-1].Type)
 	}
+}
+
+func TestScanSimpleParens(t *testing.T) {
+	checkTokens(t, "()", []expectedToken{
+		{typ: LEFT_PAREN,  lexeme: "(", lit: nil, line: 1},
+		{typ: RIGHT_PAREN, lexeme: ")", lit: nil, line: 1},
+	})
 }
 
 func TestScanNumber(t *testing.T) {
