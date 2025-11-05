@@ -2,7 +2,7 @@ package scanner
 
 import (
 	"testing"
-	"example.com/golox/src/shared"
+	"example.com/golox/lox/shared"
 )
 
 type expectedToken struct {
