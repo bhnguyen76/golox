@@ -7,8 +7,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"example.com/golox/src/scanner"
-	"example.com/golox/src/shared"
+	"example.com/golox/lox/scanner"
+	"example.com/golox/lox/shared"
 )
 
 // var hadError bool

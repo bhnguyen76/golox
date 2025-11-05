@@ -3,7 +3,7 @@ package scanner
 import (
 	"strconv"
 
-	"example.com/golox/src/shared"
+	"example.com/golox/lox/shared"
 )
 
 type Scanner struct {
