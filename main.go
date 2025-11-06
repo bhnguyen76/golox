@@ -5,9 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 
-	"example.com/golox/lox/ast"
 	"example.com/golox/lox/interpreter"
 	"example.com/golox/lox/parser"
 	"example.com/golox/lox/scanner"
