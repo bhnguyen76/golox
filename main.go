@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 
 	"example.com/golox/lox/scanner"
+	"example.com/golox/lox/ast"
+	"example.com/golox/lox/parser"
 	"example.com/golox/lox/shared"
 )
 
@@ -56,10 +58,15 @@ func run(source string) error {
 	scanner := scanner.NewScanner(source)
 	tokens := scanner.ScanTokens()
 
-	// For now, just print the tokens.
-	for token := range tokens {
-		fmt.Println(token) 
+	parser := parser.NewParser(tokens)
+	expression := parser.Parse()
+
+	if shared.HadError || expression == nil {
+		return nil
 	}
+
+	printer := &ast.AstPrinter{}
+	fmt.Println(printer.Print(expression))
 	return nil
 }
 
