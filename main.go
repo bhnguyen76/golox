@@ -5,27 +5,38 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 
-	"example.com/golox/lox/scanner"
-	"example.com/golox/lox/ast"
+	"example.com/golox/lox/interpreter"
 	"example.com/golox/lox/parser"
+	"example.com/golox/lox/scanner"
 	"example.com/golox/lox/shared"
 )
 
-// var hadError bool
+const (
+	exitUsage       = 64
+	exitDataError   = 65 // hadError
+	exitRuntimeError = 70 // hadRuntimeError
+)
+
+var interp = &interpreter.Interpreter{}
 
 func main() {
 	args := os.Args[1:]
 	if len(args) > 1 {
 		fmt.Println("Usage: glox [script]")
 	} else if len(args) == 1 {
-		sourcePath, err := filepath.Abs(os.Args[1])
-		if err != nil {
-			fmt.Println("Error running file")
-			os.Exit(-1)
+		shared.ResetErrors()
+		if err := runFile(args[0]); err != nil {
+			fmt.Fprintln(os.Stderr, "Error:", err)
+			os.Exit(exitDataError)
 		}
-		runFile(sourcePath)
+		
+		if shared.HadError {
+			os.Exit(exitDataError) 
+		}
+		if shared.HadRuntimeError {
+			os.Exit(exitRuntimeError) 
+		}
 	} else {
 		runPrompt()
 	}
@@ -65,16 +76,6 @@ func run(source string) error {
 		return nil
 	}
 
-	printer := &ast.AstPrinter{}
-	fmt.Println(printer.Print(expression))
+	interp.Interpret(expression)
 	return nil
 }
-
-// func errorAt(line int, message string) {
-// 	report(line, "",message)
-// }
-
-// func report(line int, where string, message string) {
-// 	fmt.Fprint(os.Stderr, "[Line %d] Error%s: %s\n", line, where, message)
-// 	hadError = true
-// }

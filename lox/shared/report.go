@@ -7,6 +7,7 @@ import (
 
 // HadError is set to true when any error is reported.
 var HadError bool
+var HadRuntimeError bool
 
 // ErrorAt reports an error at a given line with a message.
 func ErrorAt(line int, message string) {
