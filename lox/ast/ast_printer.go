@@ -38,6 +38,25 @@ func (p *AstPrinter) VisitUnaryExpr(expr *Unary) any {
 	return p.parenthesize(expr.Operator.Lexeme, expr.Right)
 }
 
+func (p *AstPrinter) VisitAssignExpr(expr *Assign) any {
+	return p.parenthesize("assign "+expr.Name.Lexeme, expr.Value)
+}
+
+func (p *AstPrinter) VisitVariableExpr(expr *Variable) any {
+	return expr.Name.Lexeme
+}
+
+func (p *AstPrinter) VisitLogicalExpr(expr *Logical) any {
+	return p.parenthesize(expr.Operator.Lexeme, expr.Left, expr.Right)
+}
+
+func (p *AstPrinter) VisitCallExpr(expr *Call) any {
+	parts := make([]Expr, 0, 1+len(expr.Arguments))
+	parts = append(parts, expr.Callee)
+	parts = append(parts, expr.Arguments...)
+	return p.parenthesize("call", parts...)
+}
+
 // ---- Helper ----
 
 func (p *AstPrinter) parenthesize(name string, exprs ...Expr) string {

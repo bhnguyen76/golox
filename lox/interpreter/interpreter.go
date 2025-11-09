@@ -18,9 +18,20 @@ func (e RuntimeError) Error() string {
 	return e.Message
 }
 
-type Interpreter struct{}
+type Interpreter struct{
+	globals *Environment
+	environment *Environment
+}
 
-// Eval is like Java's "evaluate" from outside: given an Expr, produce a value.
+func NewInterpreter() *Interpreter {
+	globals := NewEnvironment()
+	return &Interpreter{
+		globals: globals,
+		environment: globals,
+	}
+}
+
+
 func (in *Interpreter) evaluate(expr ast.Expr) any {
 	if expr == nil {
 		return nil
@@ -108,7 +119,119 @@ func (in *Interpreter) VisitBinaryExpr(expr *ast.Binary) any {
 	return nil
 }
 
-func (in *Interpreter) Interpret(expr ast.Expr) {
+func (in *Interpreter) VisitExpressionStmt(stmt *ast.Expression) any {
+	in.evaluate(stmt.Expression)
+	return nil
+}
+
+func (in *Interpreter) VisitPrintStmt(stmt *ast.Print) any {
+	value := in.evaluate(stmt.Expression)
+	fmt.Println(stringify(value))
+	return nil
+}
+
+func (in *Interpreter) VisitVarStmt(stmt *ast.Var) any { 
+	var value any = nil
+	if stmt.Initializer != nil {
+		value = in.evaluate(stmt.Initializer)
+	}
+	in.environment.Define(stmt.Name.Lexeme, value)
+	return nil
+}
+
+func (in *Interpreter) VisitAssignExpr(expr *ast.Assign) any {
+	value := in.evaluate(expr.Value)
+	in.environment.Assign(expr.Name, value)
+	return value
+}
+
+func (in *Interpreter) VisitVariableExpr(expr *ast.Variable) any {
+	return in.environment.Get(expr.Name)
+}
+
+func (in *Interpreter) VisitBlockStmt(stmt *ast.Block) any {
+	newEnv := NewEnclosedEnvironment(in.environment)
+	in.executeBlock(stmt.Statements, newEnv)
+	return nil
+}
+
+func (in *Interpreter) VisitIfStmt(stmt *ast.If) any {
+	if isTruthy(in.evaluate(stmt.Condition)) {
+		in.execute(stmt.ThenBranch)
+	} else if stmt.ElseBranch != nil {
+		in.execute(stmt.ElseBranch)
+	}
+	return nil
+}
+
+func (in *Interpreter) VisitLogicalExpr(expr *ast.Logical) any {
+	left := in.evaluate(expr.Left)
+
+	if expr.Operator.Type == scanner.OR {
+		if isTruthy(left) {
+			return left
+		}
+	} else {
+		if !isTruthy(left) {
+			return left
+		}
+	}
+
+	return in.evaluate(expr.Right)
+}
+
+func (in *Interpreter) VisitWhileStmt(stmt *ast.While) any {
+	for isTruthy(in.evaluate(stmt.Condition)) {
+		in.execute(stmt.Body)
+	}
+	return nil
+}
+
+func (in *Interpreter) VisitCallExpr(expr *ast.Call) any {
+	callee := in.evaluate(expr.Callee)
+
+	var arguments []any
+	for _, arguement := range expr.Arguments {
+		arguments = append(arguments, in.evaluate(arguement))
+	}
+
+	fn, ok := callee.(LoxCallable)
+	if !ok {
+		panic(RuntimeError{
+			Token: expr.Paren,
+			Message: "Can only call functions and clsses.",
+		})
+	}
+
+	if len(arguments) != fn.Arity() {
+		panic(RuntimeError{
+			Token: expr.Paren,
+			Message: fmt.Sprintf("Expected %d arguments but got %d.", fn.Arity(), len(arguments)),
+		})
+	}
+
+	panic(RuntimeError{
+		Token: expr.Paren,
+		Message: "Can only call functions and clsses.",
+	})
+}
+
+func (in *Interpreter) VisitFunctionStmt(stmt *ast.Function) any {
+	function := NewLoxFunction(stmt, in.environment)
+	in.environment.Define(stmt.Name.Lexeme, function)
+	return nil
+}
+
+func (in *Interpreter) VisitReturnStmt(stmt *ast.Return) any {
+	var value any = nil
+	if stmt.Value != nil {
+		value = in.evaluate(stmt.Value)
+	}
+
+	panic(returnValue{Value: value})
+}
+
+func (in *Interpreter) Interpret(statements []ast.Stmt) {
 	defer func() {
 		if r := recover(); r != nil {
 			if rt, ok := r.(RuntimeError); ok {
@@ -120,8 +243,23 @@ func (in *Interpreter) Interpret(expr ast.Expr) {
 		}
 	}()
 
-	value := in.evaluate(expr)
-	fmt.Println(stringify(value))
+	for _, statement := range statements {
+		in.execute(statement)
+	}
+}
+
+func (in *Interpreter) execute(stmt ast.Stmt) {
+	stmt.Accept(in)
+}
+
+func (in *Interpreter) executeBlock(statements []ast.Stmt, environment *Environment) {
+	previous := in.environment
+	in.environment = environment
+	defer func() { in.environment = previous }()
+
+	for _, stmt := range statements {
+		in.execute(stmt)
+	}
 }
 
 func isTruthy(object any) bool {

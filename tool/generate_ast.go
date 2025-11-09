@@ -19,17 +19,38 @@ func main() {
 
 	outputDir := args[0]
 
-	// TODO: implement the generator here, e.g.:
-	defineAst(outputDir, "Expr", []string{
-	    "Binary   : Expr left, Token operator, Expr right",
-	    "Grouping : Expr expression",
-	    "Literal  : any value",
-	    "Unary    : Token operator, Expr right",
-	})
+	if err := defineAst(outputDir, "Expr", []string{
+		"Assign   : Token name, Expr value",
+		"Binary   : Expr left, Token operator, Expr right",
+		"Call     : Expr callee, Token paren, List<Expr> arguments",
+		"Grouping : Expr expression",
+		"Literal  : any value",
+		"Logical  : Expr left, Token operator, Expr right",
+		"Unary    : Token operator, Expr right",
+		"Variable : Token name",
+	}); err != nil {
+		fmt.Fprintln(os.Stderr, "generate_ast error:", err)
+		os.Exit(1)
+	}
+
+	if err := defineAst(outputDir, "Stmt", []string{
+		"Block      : List<Stmt> statements",
+		"Expression : Expr expression",
+		"Function	: Token name, List<Token> params," +
+					" List<Stmt> body",
+		"Print      : Expr expression",
+		"If         : Expr condition, Stmt thenBranch," + " Stmt elseBranch",
+		"Return		: Token keyword, Expr value",
+		"Var		: Token name, Expr initializer",
+		"While      : Expr condition, Stmt body",
+	}); err != nil {
+		fmt.Fprintln(os.Stderr, "generate_ast error:", err)
+		os.Exit(1)
+	}
 }
 
 func defineAst(outputDir, baseName string, types []string) error {
-	filename := strings.ToLower(baseName) + ".go" // expr.go, stmt.go, etc.
+	filename := strings.ToLower(baseName) + ".go" 
 	path := filepath.Join(outputDir, filename)
 
 	f, err := os.Create(path)
@@ -48,10 +69,12 @@ func defineAst(outputDir, baseName string, types []string) error {
 	fmt.Fprintln(w)
 
 	// Base interface: e.g. "type Expr interface { Accept(v Visitor) any }"
-	fmt.Fprintf(w, "type %s interface {\n", baseName)
-	fmt.Fprintln(w, "\tAccept(v Visitor) any")
-	fmt.Fprintln(w, "}")
-	fmt.Fprintln(w)
+    visitorName := baseName + "Visitor" // ExprVisitor, StmtVisitor
+
+    fmt.Fprintf(w, "type %s interface {\n", baseName)
+    fmt.Fprintf(w, "\tAccept(v %s) any\n", visitorName)
+    fmt.Fprintln(w, "}")
+    fmt.Fprintln(w)
 
 	// Visitor interface: VisitBinaryExpr(*Binary) any, etc.
 	if err := defineVisitor(w, baseName, types); err != nil {
@@ -76,16 +99,17 @@ func defineAst(outputDir, baseName string, types []string) error {
 }
 
 func defineVisitor(w *bufio.Writer, baseName string, types []string) error {
-	// e.g. type Visitor interface { VisitBinaryExpr(*Binary) any; ... }
-	fmt.Fprintln(w, "type Visitor interface {")
-	for _, t := range types {
-		typeName := strings.TrimSpace(strings.Split(t, ":")[0])
-		// VisitBinaryExpr(*Binary) any
-		fmt.Fprintf(w, "\tVisit%s%s(*%s) any\n", typeName, baseName, typeName)
-	}
-	fmt.Fprintln(w, "}")
-	fmt.Fprintln(w)
-	return nil
+    visitorName := baseName + "Visitor" // ExprVisitor or StmtVisitor
+
+    fmt.Fprintf(w, "type %s interface {\n", visitorName)
+    for _, t := range types {
+        typeName := strings.TrimSpace(strings.Split(t, ":")[0])
+        // e.g. VisitBinaryExpr(*Binary) any  or VisitPrintStmt(*Print) any
+        fmt.Fprintf(w, "\tVisit%s%s(*%s) any\n", typeName, baseName, typeName)
+    }
+    fmt.Fprintln(w, "}")
+    fmt.Fprintln(w)
+    return nil
 }
 
 func defineType(w *bufio.Writer, baseName, className, fieldList string) error {
@@ -113,11 +137,12 @@ func defineType(w *bufio.Writer, baseName, className, fieldList string) error {
 	// func (n *Binary) Accept(v Visitor) any {
 	//     return v.VisitBinaryExpr(n)
 	// }
-	recv := strings.ToLower(className[:1]) // n, g, l, u, etc.
-	fmt.Fprintf(w, "func (%s *%s) Accept(v Visitor) any {\n", recv, className)
-	fmt.Fprintf(w, "\treturn v.Visit%s%s(%s)\n", className, baseName, recv)
-	fmt.Fprintln(w, "}")
-	fmt.Fprintln(w)
+    visitorName := baseName + "Visitor" // ExprVisitor or StmtVisitor
+
+    fmt.Fprintf(w, "func (n *%s) Accept(v %s) any {\n", className, visitorName)
+    fmt.Fprintf(w, "\treturn v.Visit%s%s(n)\n", className, baseName)
+    fmt.Fprintln(w, "}")
+    fmt.Fprintln(w)
 
 	return nil
 }
@@ -130,8 +155,13 @@ func mapFieldTypeToGo(t string) string {
 		return "scanner.Token"
 	case "Object", "any":
 		return "any"
+	case "List<Stmt>":
+		return "[]Stmt"
+	case "List<Expr>":
+		return "[]Expr"
+	case "List<Token>":
+		return "[]scanner.Token"
 	default:
-		// you can extend this later for List<Stmt> etc.
 		return t
 	}
 }
