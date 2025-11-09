@@ -8,6 +8,7 @@ import (
 
 	"example.com/golox/lox/interpreter"
 	"example.com/golox/lox/parser"
+	"example.com/golox/lox/resolver"
 	"example.com/golox/lox/scanner"
 	"example.com/golox/lox/shared"
 )
@@ -18,7 +19,7 @@ const (
 	exitRuntimeError = 70 // hadRuntimeError
 )
 
-var interp = &interpreter.Interpreter{}
+var interp = interpreter.NewInterpreter()
 
 func main() {
 	args := os.Args[1:]
@@ -66,16 +67,24 @@ func runPrompt() {
 }
 
 func run(source string) error {
-	scanner := scanner.NewScanner(source)
-	tokens := scanner.ScanTokens()
+	sc := scanner.NewScanner(source)
+	tokens := sc.ScanTokens()
 
-	parser := parser.NewParser(tokens)
-	statements := parser.Parse()
-	
+	p := parser.NewParser(tokens)
+	statements := p.Parse()
+
 	if shared.HadError || statements == nil {
+		return nil
+	}
+
+	res := resolver.NewResolver(interp)
+	res.Resolve(statements)
+
+	if shared.HadError {
 		return nil
 	}
 
 	interp.Interpret(statements)
 	return nil
 }
+

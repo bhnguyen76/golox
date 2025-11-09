@@ -21,6 +21,7 @@ func (e RuntimeError) Error() string {
 type Interpreter struct{
 	globals *Environment
 	environment *Environment
+	locals map[ast.Expr]int
 }
 
 func NewInterpreter() *Interpreter {
@@ -38,8 +39,6 @@ func (in *Interpreter) evaluate(expr ast.Expr) any {
 	}
 	return expr.Accept(in)
 }
-
-// --- Visitor methods ---
 
 func (in *Interpreter) VisitLiteralExpr(expr *ast.Literal) any {
 	return expr.Value
@@ -141,12 +140,18 @@ func (in *Interpreter) VisitVarStmt(stmt *ast.Var) any {
 
 func (in *Interpreter) VisitAssignExpr(expr *ast.Assign) any {
 	value := in.evaluate(expr.Value)
-	in.environment.Assign(expr.Name, value)
+
+	if distance, ok := in.locals[expr]; ok {
+        in.environment.AssignAt(distance, expr.Name, value)
+    } else {
+        in.globals.Assign(expr.Name, value)
+    }
+
 	return value
 }
 
 func (in *Interpreter) VisitVariableExpr(expr *ast.Variable) any {
-	return in.environment.Get(expr.Name)
+	return in.lookUpVariable(expr.Name, expr)
 }
 
 func (in *Interpreter) VisitBlockStmt(stmt *ast.Block) any {
@@ -210,10 +215,7 @@ func (in *Interpreter) VisitCallExpr(expr *ast.Call) any {
 		})
 	}
 
-	panic(RuntimeError{
-		Token: expr.Paren,
-		Message: "Can only call functions and clsses.",
-	})
+	return fn.Call(in, arguments)
 }
 
 func (in *Interpreter) VisitFunctionStmt(stmt *ast.Function) any {
@@ -252,6 +254,13 @@ func (in *Interpreter) execute(stmt ast.Stmt) {
 	stmt.Accept(in)
 }
 
+func (in *Interpreter) Resolve(expr ast.Expr, depth int) {
+	if in.locals == nil {
+        in.locals = make(map[ast.Expr]int)
+    }
+    in.locals[expr] = depth
+}
+
 func (in *Interpreter) executeBlock(statements []ast.Stmt, environment *Environment) {
 	previous := in.environment
 	in.environment = environment
@@ -260,6 +269,13 @@ func (in *Interpreter) executeBlock(statements []ast.Stmt, environment *Environm
 	for _, stmt := range statements {
 		in.execute(stmt)
 	}
+}
+
+func (in *Interpreter) lookUpVariable(name scanner.Token, expr ast.Expr) any {
+    if distance, ok := in.locals[expr]; ok {
+        return in.environment.GetAt(distance, name.Lexeme)
+    }
+    return in.globals.Get(name)
 }
 
 func isTruthy(object any) bool {
