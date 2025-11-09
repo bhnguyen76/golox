@@ -41,6 +41,26 @@ func (env *Environment) Get(name scanner.Token) any {
 	})
 }
 
+func (env *Environment) GetAt(distance int, name string) any {
+	environment := env.ancestor(distance)
+    if value, ok := environment.values[name]; ok {
+        return value
+    }
+    
+    return nil
+}
+
+func (env *Environment) ancestor(distance int) *Environment {
+    environment := env
+    for i := 0; i < distance; i++ {
+        if environment.enclosing == nil {
+            break 
+        }
+        environment = environment.enclosing
+    }
+    return environment
+}
+
 func (env *Environment) Assign(name scanner.Token, value any) {
 	if _, ok := env.values[name.Lexeme]; ok {
 		env.values[name.Lexeme] = value
@@ -56,6 +76,11 @@ func (env *Environment) Assign(name scanner.Token, value any) {
 		Token:   name,
 		Message: fmt.Sprintf("Undefined variable '%s'.", name.Lexeme),
 	})
+}
+
+func (env *Environment) AssignAt(distance int, name scanner.Token, value any) {
+    environment := env.ancestor(distance)
+    environment.values[name.Lexeme] = value
 }
 
 func (env *Environment) Define(name string, value any) {
