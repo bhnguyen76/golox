@@ -70,12 +70,12 @@ func run(source string) error {
 	tokens := scanner.ScanTokens()
 
 	parser := parser.NewParser(tokens)
-	expression := parser.Parse()
-
-	if shared.HadError || expression == nil {
+	statements := parser.Parse()
+	
+	if shared.HadError || statements == nil {
 		return nil
 	}
 
-	interp.Interpret(expression)
+	interp.Interpret(statements)
 	return nil
 }
