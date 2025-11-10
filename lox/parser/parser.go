@@ -85,7 +85,7 @@ func (p *Parser) expressionStatement() ast.Stmt {
 	}
 }
 
-func (p *Parser) function(kind string) ast.Stmt {
+func (p *Parser) function(kind string) *ast.Function {
 	name := p.consume(scanner.IDENTIFIER, "Expect " + kind + " name.")
 
 	p.consume(scanner.LEFT_PAREN, "Expect '(' after " + kind + " name.")
@@ -116,6 +116,7 @@ func (p *Parser) function(kind string) ast.Stmt {
 		Body: body,
 	}
 }
+
 func (p *Parser) ifStatement() ast.Stmt {
 	p.consume(scanner.LEFT_PAREN, "Expect '(' after 'if'.")
 	condition := p.expression()
@@ -143,15 +144,24 @@ func (p *Parser) assignment() ast.Expr {
 		equals := p.previous()
 		value := p.assignment()
 
-		if v, ok := expr.(*ast.Variable); ok {
-			name := v.Name
-			return &ast.Assign{
-				Name:  name,
-				Value: value,
-			}
-		}
+		switch e := expr.(type) {
+        case *ast.Variable:
+            name := e.Name
+            return &ast.Assign{
+                Name:  name,
+                Value: value,
+            }
 
-		panic(p.error(equals, "Invalid assignment target."))
+        case *ast.Get:
+            return &ast.Set{
+                Object: e.Object,
+                Name:   e.Name,
+                Value:  value,
+            }
+
+        default:
+            p.error(equals, "Invalid assignment target.")
+        }
 	}
 
 		return expr
@@ -285,7 +295,10 @@ func (p *Parser) declaration() (stmt ast.Stmt) {
 			panic(r)
 		}
 	}()
-
+	
+	if p.match(scanner.CLASS) {
+		return p.classDeclaration()
+	}
 	if p.match(scanner.FUN) {
 		return p.function("function")
 	}
@@ -296,7 +309,7 @@ func (p *Parser) declaration() (stmt ast.Stmt) {
 	return p.statement()
 }
 
-func (p *Parser) varDeclaration() ast.Stmt{
+func (p *Parser) varDeclaration() ast.Stmt {
 	name := p.consume(scanner.IDENTIFIER, "Expect variable name.")
 
 	var initializer ast.Expr = nil
@@ -309,6 +322,23 @@ func (p *Parser) varDeclaration() ast.Stmt{
 		Name		: name,
 		Initializer : initializer,
 	}
+}
+
+func (p *Parser) classDeclaration() ast.Stmt {
+    name := p.consume(scanner.IDENTIFIER, "Expect class name.")
+    p.consume(scanner.LEFT_BRACE, "Expect '{' before class body.")
+
+    var methods []*ast.Function
+    for !p.check(scanner.RIGHT_BRACE) && !p.isAtEnd() {
+        methods = append(methods, p.function("method"))
+    }
+
+    p.consume(scanner.RIGHT_BRACE, "Expect '}' after class body.")
+
+    return &ast.Class{
+        Name:    name,
+        Methods: methods,
+    }
 }
 
 func (p *Parser) block() []ast.Stmt {
@@ -444,6 +474,12 @@ func (p *Parser) call() ast.Expr {
 	for true {
 		if p.match(scanner.LEFT_PAREN) {
 			expr = p.finishCall(expr)
+		} else if p.match(scanner.DOT) {
+			name := p.consume(scanner.IDENTIFIER, "Expect property name after '.'.")
+			expr = &ast.Get{
+				Object: expr,
+				Name: name,
+			}
 		} else {
 			break
 		}
@@ -490,6 +526,12 @@ func (p *Parser) primary() ast.Expr {
 
 	if p.match(scanner.NUMBER, scanner.STRING) {
 		return &ast.Literal{Value: p.previous().Literal}
+	}
+
+	if p.match(scanner.THIS) {
+		return &ast.This{
+			Keyword: p.previous(),
+		}
 	}
 
 	if p.match(scanner.IDENTIFIER) {

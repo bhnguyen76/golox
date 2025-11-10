@@ -8,6 +8,7 @@ type Stmt interface {
 
 type StmtVisitor interface {
 	VisitBlockStmt(*Block) any
+	VisitClassStmt(*Class) any
 	VisitExpressionStmt(*Expression) any
 	VisitFunctionStmt(*Function) any
 	VisitPrintStmt(*Print) any
@@ -23,6 +24,15 @@ type Block struct {
 
 func (n *Block) Accept(v StmtVisitor) any {
 	return v.VisitBlockStmt(n)
+}
+
+type Class struct {
+	Name scanner.Token
+	Methods []*Function
+}
+
+func (n *Class) Accept(v StmtVisitor) any {
+	return v.VisitClassStmt(n)
 }
 
 type Expression struct {

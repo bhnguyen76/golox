@@ -57,6 +57,18 @@ func (p *AstPrinter) VisitCallExpr(expr *Call) any {
 	return p.parenthesize("call", parts...)
 }
 
+func (p *AstPrinter) VisitGetExpr(expr *Get) any {
+	return p.parenthesize("get "+expr.Name.Lexeme, expr.Object)
+}
+
+func (p *AstPrinter) VisitSetExpr(expr *Set) any {
+	return p.parenthesize("set "+expr.Name.Lexeme, expr.Object, expr.Value)
+}
+
+func (p *AstPrinter) VisitThisExpr(expr *This) any {
+	return "this"
+}
+
 // ---- Helper ----
 
 func (p *AstPrinter) parenthesize(name string, exprs ...Expr) string {

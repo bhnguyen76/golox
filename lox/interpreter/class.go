@@ -1,0 +1,43 @@
+package interpreter
+
+import "fmt"
+
+type LoxClass struct {
+    Name string
+	 Methods map[string]*LoxFunction
+}
+
+func NewLoxClass(name string, methods map[string]*LoxFunction) *LoxClass {
+    return &LoxClass{
+        Name:    name,
+        Methods: methods,
+    }
+}
+
+func (c *LoxClass) String() string {
+    return fmt.Sprintf("<class %s>", c.Name)
+}
+
+func (c *LoxClass) Call(in *Interpreter, arguments []any) any {
+    instance := NewLoxInstance(c)
+
+    if initializer := c.FindMethod("init"); initializer != nil {
+        initializer.Bind(instance).Call(in, arguments)
+    }
+
+    return instance
+}
+
+func (c *LoxClass) Arity() int {
+    if initializer := c.FindMethod("init"); initializer != nil {
+        return initializer.Arity()
+    }
+    return 0
+}
+
+func (c *LoxClass) FindMethod(name string) *LoxFunction {
+    if m, ok := c.Methods[name]; ok {
+        return m
+    }
+    return nil
+}

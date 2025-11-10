@@ -219,9 +219,9 @@ func (in *Interpreter) VisitCallExpr(expr *ast.Call) any {
 }
 
 func (in *Interpreter) VisitFunctionStmt(stmt *ast.Function) any {
-	function := NewLoxFunction(stmt, in.environment)
-	in.environment.Define(stmt.Name.Lexeme, function)
-	return nil
+    function := NewLoxFunction(stmt, in.environment, false)
+    in.environment.Define(stmt.Name.Lexeme, function)
+    return nil
 }
 
 func (in *Interpreter) VisitReturnStmt(stmt *ast.Return) any {
@@ -231,6 +231,54 @@ func (in *Interpreter) VisitReturnStmt(stmt *ast.Return) any {
 	}
 
 	panic(returnValue{Value: value})
+}
+
+func (in *Interpreter) VisitClassStmt(stmt *ast.Class) any {
+    in.environment.Define(stmt.Name.Lexeme, nil)
+
+    methods := make(map[string]*LoxFunction)
+    for _, method := range stmt.Methods {
+        isInitializer := method.Name.Lexeme == "init"
+        function := NewLoxFunction(method, in.environment, isInitializer)
+        methods[method.Name.Lexeme] = function
+    }
+
+    klass := NewLoxClass(stmt.Name.Lexeme, methods)
+    in.environment.Assign(stmt.Name, klass)
+    return nil
+}
+
+func (in *Interpreter) VisitGetExpr(expr *ast.Get) any {
+    object := in.evaluate(expr.Object)
+
+    if instance, ok := object.(*LoxInstance); ok {
+        return instance.Get(expr.Name)
+    }
+
+    panic(RuntimeError{
+        Token:   expr.Name,
+        Message: "Only instances have properties.",
+    })
+}
+
+func (in *Interpreter) VisitSetExpr(expr *ast.Set) any {
+    object := in.evaluate(expr.Object)
+
+    instance, ok := object.(*LoxInstance)
+    if !ok {
+        panic(RuntimeError{
+            Token:   expr.Name,
+            Message: "Only instances have fields.",
+        })
+    }
+
+    value := in.evaluate(expr.Value)
+    instance.Set(expr.Name, value)
+    return value
+}
+
+func (in *Interpreter) VisitThisExpr(expr *ast.This) any {
+	return in.lookUpVariable(expr.Keyword, expr)
 }
 
 func (in *Interpreter) Interpret(statements []ast.Stmt) {

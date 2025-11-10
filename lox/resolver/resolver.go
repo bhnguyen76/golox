@@ -14,12 +14,22 @@ type FunctionType int
 const (
     FunctionNone FunctionType = iota
     FunctionFunction
+    FunctionInitializer
+    FunctionMethod
+)
+
+type ClassType int
+
+const (
+    ClassNone ClassType = iota
+    ClassClass
 )
 
 type Resolver struct {
 	interpreter *interpreter.Interpreter
 	scopes []map[string]bool
     currentFunction FunctionType
+    currentClass ClassType
 }
 
 func (r *Resolver) errorToken(token scanner.Token, message string) {
@@ -32,6 +42,7 @@ func NewResolver(interpreter *interpreter.Interpreter) *Resolver {
 		interpreter: interpreter,
         scopes: nil,
         currentFunction: FunctionNone,
+        currentClass:    ClassNone,
 	}
 }
 
@@ -102,11 +113,16 @@ func (r *Resolver) VisitReturnStmt(stmt *ast.Return) any {
         r.errorToken(stmt.Keyword, "Can't return from top-level code.")
     }
 
-    if stmt.Value != nil {          
+    if stmt.Value != nil {
+        if r.currentFunction == FunctionInitializer {
+            r.errorToken(stmt.Keyword, "Can't return a value from an initializer.")
+        }
         r.resolveExpr(stmt.Value)
     }
+
     return nil
 }
+
 
 func (r *Resolver) VisitWhileStmt(stmt *ast.While) any {
     r.resolveExpr(stmt.Condition)
@@ -147,6 +163,51 @@ func (r *Resolver) VisitLogicalExpr(expr *ast.Logical) any {
 
 func (r *Resolver) VisitUnaryExpr(expr *ast.Unary) any {
     r.resolveExpr(expr.Right)
+    return nil
+}
+
+func (r *Resolver) VisitClassStmt(stmt *ast.Class) any {
+    enclosingClass := r.currentClass
+    r.currentClass = ClassClass
+
+    r.declare(stmt.Name)
+    r.define(stmt.Name)
+
+    r.beginScope()
+    r.scopes[len(r.scopes)-1]["this"] = true
+
+    for _, method := range stmt.Methods {
+        fnType := FunctionMethod
+        if method.Name.Lexeme == "init" {
+            fnType = FunctionInitializer
+        }
+        r.resolveFunction(method, fnType)
+    }
+
+    r.endScope()
+    r.currentClass = enclosingClass
+    return nil
+}
+
+
+func (r *Resolver) VisitGetExpr (expr *ast.Get) any {
+    r.resolveExpr(expr.Object)
+    return nil
+}
+
+func (r *Resolver) VisitSetExpr (expr *ast.Set) any {
+    r.resolveExpr(expr.Value)
+    r.resolveExpr(expr.Object)
+    return nil
+}
+
+func (r *Resolver) VisitThisExpr(expr *ast.This) any {
+    if r.currentClass == ClassNone {
+        r.errorToken(expr.Keyword, "Can't use 'this' outside of a class.")
+        return nil
+    }
+
+    r.resolveLocal(expr, expr.Keyword)
     return nil
 }
 
