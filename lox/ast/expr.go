@@ -15,6 +15,7 @@ type ExprVisitor interface {
 	VisitLiteralExpr(*Literal) any
 	VisitLogicalExpr(*Logical) any
 	VisitSetExpr(*Set) any
+	VisitSuperExpr(*Super) any
 	VisitThisExpr(*This) any
 	VisitUnaryExpr(*Unary) any
 	VisitVariableExpr(*Variable) any
@@ -92,6 +93,15 @@ type Set struct {
 
 func (n *Set) Accept(v ExprVisitor) any {
 	return v.VisitSetExpr(n)
+}
+
+type Super struct {
+	Keyword scanner.Token
+	Method scanner.Token
+}
+
+func (n *Super) Accept(v ExprVisitor) any {
+	return v.VisitSuperExpr(n)
 }
 
 type This struct {

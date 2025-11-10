@@ -23,6 +23,7 @@ type ClassType int
 const (
     ClassNone ClassType = iota
     ClassClass
+    ClassSubClass
 )
 
 type Resolver struct {
@@ -173,7 +174,26 @@ func (r *Resolver) VisitClassStmt(stmt *ast.Class) any {
     r.declare(stmt.Name)
     r.define(stmt.Name)
 
+    if stmt.Superclass != nil {
+        if superVar, ok := stmt.Superclass.(*ast.Variable); ok {
+            if stmt.Name.Lexeme == superVar.Name.Lexeme {
+                r.errorToken(superVar.Name, "A class can't inherit from itself.")
+            }
+        }
+    }
+
+    if stmt.Superclass != nil {
+        r.currentClass = ClassSubClass
+        r.resolveExpr(stmt.Superclass)
+    }
+
+    if stmt.Superclass != nil {
+        r.beginScope()
+        r.scopes[len(r.scopes)-1]["super"] = true
+    }
+
     r.beginScope()
+
     r.scopes[len(r.scopes)-1]["this"] = true
 
     for _, method := range stmt.Methods {
@@ -185,17 +205,22 @@ func (r *Resolver) VisitClassStmt(stmt *ast.Class) any {
     }
 
     r.endScope()
+
+    if stmt.Superclass != nil {
+        r.endScope()
+    }
+
     r.currentClass = enclosingClass
     return nil
 }
 
 
-func (r *Resolver) VisitGetExpr (expr *ast.Get) any {
+func (r *Resolver) VisitGetExpr(expr *ast.Get) any {
     r.resolveExpr(expr.Object)
     return nil
 }
 
-func (r *Resolver) VisitSetExpr (expr *ast.Set) any {
+func (r *Resolver) VisitSetExpr(expr *ast.Set) any {
     r.resolveExpr(expr.Value)
     r.resolveExpr(expr.Object)
     return nil
@@ -205,6 +230,17 @@ func (r *Resolver) VisitThisExpr(expr *ast.This) any {
     if r.currentClass == ClassNone {
         r.errorToken(expr.Keyword, "Can't use 'this' outside of a class.")
         return nil
+    }
+
+    r.resolveLocal(expr, expr.Keyword)
+    return nil
+}
+
+func (r *Resolver) VisitSuperExpr(expr *ast.Super) any {
+    if r.currentClass == ClassNone {
+        r.errorToken(expr.Keyword, "Can't use 'super' outside of a class.")
+    } else if r.currentClass != ClassSubClass {
+        r.errorToken(expr.Keyword, "Can't use 'super' in a class with no superclass.")
     }
 
     r.resolveLocal(expr, expr.Keyword)

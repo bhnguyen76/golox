@@ -326,6 +326,15 @@ func (p *Parser) varDeclaration() ast.Stmt {
 
 func (p *Parser) classDeclaration() ast.Stmt {
     name := p.consume(scanner.IDENTIFIER, "Expect class name.")
+
+	var superclass ast.Expr 
+	if p.match(scanner.LESS) {
+		p.consume(scanner.IDENTIFIER, "Expect superclass name.")
+		superclass = &ast.Variable{
+			Name: p.previous(),
+		}
+	}
+
     p.consume(scanner.LEFT_BRACE, "Expect '{' before class body.")
 
     var methods []*ast.Function
@@ -337,6 +346,7 @@ func (p *Parser) classDeclaration() ast.Stmt {
 
     return &ast.Class{
         Name:    name,
+		Superclass: superclass,
         Methods: methods,
     }
 }
@@ -526,6 +536,16 @@ func (p *Parser) primary() ast.Expr {
 
 	if p.match(scanner.NUMBER, scanner.STRING) {
 		return &ast.Literal{Value: p.previous().Literal}
+	}
+
+	if p.match(scanner.SUPER) {
+		keyword := p.previous()
+		p.consume(scanner.DOT, "Expect '.' after 'super'.")
+		method := p.consume(scanner.IDENTIFIER, "Expect superclass method name.")
+		return &ast.Super{
+			Keyword: keyword,
+			Method: method,
+		}
 	}
 
 	if p.match(scanner.THIS) {
