@@ -10,9 +10,12 @@ type ExprVisitor interface {
 	VisitAssignExpr(*Assign) any
 	VisitBinaryExpr(*Binary) any
 	VisitCallExpr(*Call) any
+	VisitGetExpr(*Get) any
 	VisitGroupingExpr(*Grouping) any
 	VisitLiteralExpr(*Literal) any
 	VisitLogicalExpr(*Logical) any
+	VisitSetExpr(*Set) any
+	VisitThisExpr(*This) any
 	VisitUnaryExpr(*Unary) any
 	VisitVariableExpr(*Variable) any
 }
@@ -46,6 +49,15 @@ func (n *Call) Accept(v ExprVisitor) any {
 	return v.VisitCallExpr(n)
 }
 
+type Get struct {
+	Object Expr
+	Name scanner.Token
+}
+
+func (n *Get) Accept(v ExprVisitor) any {
+	return v.VisitGetExpr(n)
+}
+
 type Grouping struct {
 	Expression Expr
 }
@@ -70,6 +82,24 @@ type Logical struct {
 
 func (n *Logical) Accept(v ExprVisitor) any {
 	return v.VisitLogicalExpr(n)
+}
+
+type Set struct {
+	Object Expr
+	Name scanner.Token
+	Value Expr
+}
+
+func (n *Set) Accept(v ExprVisitor) any {
+	return v.VisitSetExpr(n)
+}
+
+type This struct {
+	Keyword scanner.Token
+}
+
+func (n *This) Accept(v ExprVisitor) any {
+	return v.VisitThisExpr(n)
 }
 
 type Unary struct {

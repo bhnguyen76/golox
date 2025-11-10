@@ -11,44 +11,65 @@ type returnValue struct {
 }
 
 type LoxFunction struct {
-	declaration *ast.Function
-	closure		*Environment
+	Declaration *ast.Function
+	Closure		*Environment
+	IsInitializer bool
 }
 
-func NewLoxFunction(declaration *ast.Function, closure *Environment) *LoxFunction {
+func NewLoxFunction(declaration *ast.Function, closure *Environment, isInitializer bool) *LoxFunction {
 	return &LoxFunction{
-		declaration: declaration,
-		closure: closure,
+		Declaration: declaration,
+		Closure: closure,
+		IsInitializer: isInitializer,
 	}
 }
 
 func (f *LoxFunction) Arity() int {
-	return len(f.declaration.Params)
+	return len(f.Declaration.Params)
 }
 
-func (f *LoxFunction) Call(in *Interpreter, args []any) (result any) {
-	environment := NewEnclosedEnvironment(f.closure)
+func (f *LoxFunction) Call(in *Interpreter, arguments []any) (result any) {
+    env := NewEnclosedEnvironment(f.Closure)
 
-	for i, param := range f.declaration.Params {
-		environment.Define(param.Lexeme, args[i])
-	}
+    for i, param := range f.Declaration.Params {
+        env.Define(param.Lexeme, arguments[i])
+    }
 
-	defer func() {
-		if r := recover(); r != nil {
-			if ret, ok := r.(returnValue); ok {
-				result = ret.Value
-			} else {
-				panic(r)
-			}
-		}
-	}()
+    defer func() {
+        if r := recover(); r != nil {
+            if rv, ok := r.(returnValue); ok {
+                if f.IsInitializer {
+                    result = f.Closure.GetAt(0, "this")
+                } else {
+                    result = rv.Value
+                }
+            } else {
+                panic(r)
+            }
+        } else {
+            if f.IsInitializer {
+                result = f.Closure.GetAt(0, "this")
+            } else {
+                result = nil
+            }
+        }
+    }()
 
-	in.executeBlock(f.declaration.Body, environment)
+    in.executeBlock(f.Declaration.Body, env)
+    return 
+}
 
-	return nil
+func (f *LoxFunction) Bind(instance *LoxInstance) *LoxFunction {
+    env := NewEnclosedEnvironment(f.Closure)
+    env.Define("this", instance)
+    return &LoxFunction{
+        Declaration:   f.Declaration,
+        Closure:       env,
+        IsInitializer: f.IsInitializer,
+    }
 }
 
 func (f *LoxFunction) String() string {
-	return fmt.Sprintf("<fn %s>", f.declaration.Name.Lexeme)
+	return fmt.Sprintf("<fn %s>", f.Declaration.Name.Lexeme)
 }
 

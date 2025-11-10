@@ -23,9 +23,12 @@ func main() {
 		"Assign   : Token name, Expr value",
 		"Binary   : Expr left, Token operator, Expr right",
 		"Call     : Expr callee, Token paren, List<Expr> arguments",
+		"Get      : Expr object, Token name",
 		"Grouping : Expr expression",
 		"Literal  : any value",
 		"Logical  : Expr left, Token operator, Expr right",
+		"Set      : Expr object, Token name, Expr value",
+		"This     : Token keyword",
 		"Unary    : Token operator, Expr right",
 		"Variable : Token name",
 	}); err != nil {
@@ -35,6 +38,7 @@ func main() {
 
 	if err := defineAst(outputDir, "Stmt", []string{
 		"Block      : List<Stmt> statements",
+		"Class      : Token name, List<Function> methods",
 		"Expression : Expr expression",
 		"Function	: Token name, List<Token> params," +
 					" List<Stmt> body",
@@ -161,6 +165,8 @@ func mapFieldTypeToGo(t string) string {
 		return "[]Expr"
 	case "List<Token>":
 		return "[]scanner.Token"
+	case "List<Function>":
+		return "[]*Function"
 	default:
 		return t
 	}
