@@ -234,7 +234,34 @@ func (in *Interpreter) VisitReturnStmt(stmt *ast.Return) any {
 }
 
 func (in *Interpreter) VisitClassStmt(stmt *ast.Class) any {
+	var superclass *LoxClass
+    if stmt.Superclass != nil {
+        value := in.evaluate(stmt.Superclass)
+
+        var ok bool
+        superclass, ok = value.(*LoxClass)
+        if !ok {
+            if superVar, ok2 := stmt.Superclass.(*ast.Variable); ok2 {
+                panic(RuntimeError{
+                    Token:   superVar.Name,
+                    Message: "Superclass must be a class.",
+                })
+            }
+            panic(RuntimeError{
+                Token:   stmt.Name,
+                Message: "Superclass must be a class.",
+            })
+        }
+    }
+
     in.environment.Define(stmt.Name.Lexeme, nil)
+
+    var previousEnv *Environment
+    if superclass != nil {
+        previousEnv = in.environment
+        in.environment = NewEnclosedEnvironment(in.environment)
+        in.environment.Define("super", superclass)
+    }
 
     methods := make(map[string]*LoxFunction)
     for _, method := range stmt.Methods {
@@ -243,7 +270,12 @@ func (in *Interpreter) VisitClassStmt(stmt *ast.Class) any {
         methods[method.Name.Lexeme] = function
     }
 
-    klass := NewLoxClass(stmt.Name.Lexeme, methods)
+    klass := NewLoxClass(stmt.Name.Lexeme, superclass, methods)
+
+	if superclass != nil {
+        in.environment = previousEnv
+    }
+
     in.environment.Assign(stmt.Name, klass)
     return nil
 }
@@ -280,6 +312,45 @@ func (in *Interpreter) VisitSetExpr(expr *ast.Set) any {
 func (in *Interpreter) VisitThisExpr(expr *ast.This) any {
 	return in.lookUpVariable(expr.Keyword, expr)
 }
+
+func (in *Interpreter) VisitSuperExpr(expr *ast.Super) any {
+    distance, ok := in.locals[expr]
+    if !ok {
+        panic(RuntimeError{
+            Token:   expr.Keyword,
+            Message: "Internal error: no local distance for 'super'.",
+        })
+    }
+
+    superVal := in.environment.GetAt(distance, "super")
+    superclass, ok := superVal.(*LoxClass)
+    if !ok {
+        panic(RuntimeError{
+            Token:   expr.Keyword,
+            Message: "Superclass must be a class.",
+        })
+    }
+
+    thisVal := in.environment.GetAt(distance-1, "this")
+    object, ok := thisVal.(*LoxInstance)
+    if !ok {
+        panic(RuntimeError{
+            Token:   expr.Keyword,
+            Message: "Internal error: 'this' is not an instance.",
+        })
+    }
+
+    method := superclass.FindMethod(expr.Method.Lexeme)
+    if method == nil {
+        panic(RuntimeError{
+            Token:   expr.Method,
+            Message: fmt.Sprintf("Undefined property '%s'.", expr.Method.Lexeme),
+        })
+    }
+
+    return method.Bind(object)
+}
+
 
 func (in *Interpreter) Interpret(statements []ast.Stmt) {
 	defer func() {

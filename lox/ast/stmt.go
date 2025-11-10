@@ -28,6 +28,7 @@ func (n *Block) Accept(v StmtVisitor) any {
 
 type Class struct {
 	Name scanner.Token
+	Superclass Expr
 	Methods []*Function
 }
 

@@ -69,6 +69,10 @@ func (p *AstPrinter) VisitThisExpr(expr *This) any {
 	return "this"
 }
 
+func (p *AstPrinter) VisitSuperExpr(expr *Super) any {
+	return p.parenthesize("super "+expr.Method.Lexeme)
+}
+
 // ---- Helper ----
 
 func (p *AstPrinter) parenthesize(name string, exprs ...Expr) string {

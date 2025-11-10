@@ -4,13 +4,15 @@ import "fmt"
 
 type LoxClass struct {
     Name string
-	 Methods map[string]*LoxFunction
+    Superclass *LoxClass
+	Methods map[string]*LoxFunction
 }
 
-func NewLoxClass(name string, methods map[string]*LoxFunction) *LoxClass {
+func NewLoxClass(name string, superclass *LoxClass, methods map[string]*LoxFunction) *LoxClass {
     return &LoxClass{
-        Name:    name,
-        Methods: methods,
+        Name:       name,
+        Superclass: superclass,
+        Methods:    methods,
     }
 }
 
@@ -39,5 +41,10 @@ func (c *LoxClass) FindMethod(name string) *LoxFunction {
     if m, ok := c.Methods[name]; ok {
         return m
     }
+
+    if c.Superclass != nil {
+        return c.Superclass.FindMethod(name)
+    }
+    
     return nil
 }
