@@ -1,0 +1,97 @@
+// examples/functions.lox
+
+print "== Simple functions ==";
+
+fun add(a, b) {
+  return a + b;
+}
+
+fun greet(name) {
+  print "Hello, " + name;
+}
+
+print add(2, 3);      // 5
+greet("world");       // Hello, world
+
+
+print "== Closures with counters ==";
+
+fun makeCounter(start) {
+  var i = start;
+  fun count() {
+    i = i + 1;
+    return i;
+  }
+  return count;
+}
+
+var c1 = makeCounter(0);
+var c2 = makeCounter(10);
+
+print c1();  // 1
+print c1();  // 2
+print c1();  // 3
+
+print c2();  // 11
+print c2();  // 12
+
+
+print "== Multiple closures capturing different values ==";
+
+fun makeAdder(n) {
+  fun addTo(x) {
+    return x + n;
+  }
+  return addTo;
+}
+
+var add1 = makeAdder(1);
+var add10 = makeAdder(10);
+var add100 = makeAdder(100);
+
+print add1(5);    // 6
+print add10(5);   // 15
+print add100(5);  // 105
+
+
+print "== Nested functions and scope ==";
+
+var outerVar = "outer";
+
+fun outer() {
+  var innerVar = "inner";
+
+  fun inner() {
+    print outerVar;
+    print innerVar;
+  }
+
+  inner();
+}
+
+outer();
+
+
+print "== Recursion: factorial and fibonacci ==";
+
+fun fact(n) {
+  if (n <= 1) return 1;
+  return n * fact(n - 1);
+}
+
+print fact(1);   // 1
+print fact(5);   // 120
+print fact(7);   // 5040
+
+fun fib(n) {
+  if (n <= 1) return n;
+  return fib(n - 1) + fib(n - 2);
+}
+
+print fib(0);   // 0
+print fib(1);   // 1
+print fib(5);   // 5
+print fib(6);   // 8
+
+
+print "== Done (functions and closures) ==";

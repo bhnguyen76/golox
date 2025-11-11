@@ -1,0 +1,118 @@
+Overview: 
+The Lox interpreter is made up of multiple Go packages that correspond to major parts of the Lox interpreter/language: ast, 
+interpreter, parser, resolver, and scanner (I also included a shared package for error throwing).
+
+To follow along with Go's package management, I created individual 'unit tests' for each package. However, the interpreter package's
+testing follows a more end-to-end approach to make sure everything works overall. Go also tracks code coverage, so I tried to get
+each package's testing to at least 75% coverage.
+
+Finally, I created some example lox scripts to do some stress testing to make sure major functions of the lox language works like
+control flow, functions, classes, recursion, and generic functions. 
+
+Testing:
+Each package contains a '_test.go" file that contains its test cases.
+
+Shared Package - shared_test.go (100% code coverage):
+    - `TestErrorAtSetsHadErrorAndPrints`
+        - Input: call `ErrorAt(42, "Something went wrong")`
+        - Expected Output: stderr contains `[Line 42] Error: Something went wrong`
+        and `HadError == true`.
+    - `TestReportWithWhereFormatsMessage`
+        - Input: call `Report(7, " at 'foo'", "Bad token")`
+        - Expected Output: stderr contains `[Line 7] Error at 'foo': Bad token`
+        and `HadError == true`.
+
+Scanner Package - scanner_test.go (97.7% code coverage):
+    - `TestScanSimpleParens`
+        - Input: `"()"`
+        - Expected Output: Tokens `LEFT_PAREN`, `RIGHT_PAREN`
+    - `TestScanNumber`
+        - Input: `"123.45"`
+        - Expected Output: Token `NUMBER` with literal 123.45
+    - `TestScanString`
+        - Input: `"hello"`
+        - Expected Output: Token `STRING` with literal "hello"
+    - `TestIdentifierAndKeyword`
+        - Input: `"or foo"`
+        - Expected Output: `OR` keyword, then `IDENTIFIER`
+    - `TestCommentAndWhitespace`
+        - Input: `"  // comment\n()"`
+        - Expected Output: Tokens on line 2, verifying comment skipping
+    - `TestUnterminatedStringSetsError`
+        - Input: `"unterminated`
+        - Expected Output: `HadError == true`
+    - `TestScanOperators`
+        - Input: `"! != = == < <= > >= /"`
+        - Expected Output: Correct two-character and single-character operator tokens
+    - `TestIdentifiersUnderscoreAndMoreKeywords`
+        - Input: all reserved keywords and identifiers (`_foo`, `Bar123`)
+        - Expected Output: Correct token types from the keyword map
+    - `TestUnexpectedCharacterSetsError`
+        - Input: `"@"`
+        - Expected Output: `HadError == true` for unexpected character
+    - `TestTokenTypeStringKnownValues` / `TestTokenTypeStringUnknownValue`
+        - Input: Call `.String()` on each TokenType value
+        - Expected Output: Correct string name for known values, "UNKNOWN" for unknown.
+
+Ast Pacakge - ast_printer_test.go (81.8% code coverage):
+    - Validate each visitor method (`VisitBinaryExpr`, `VisitUnaryExpr`, `VisitGroupingExpr`, etc.)
+        - Input expressions: constructed AST nodes such as
+            `(- 123)` → `(- 123)`
+            `(+ 1 2)` → `( + 1 2 )`
+            `(assign a (+ 1 2))`
+        - Expected Output: Correct parenthesized string representations.
+    - Additional coverage tests for `VisitLogicalExpr`, `VisitGetExpr`, `VisitSetExpr`,
+    `VisitThisExpr`, `VisitSuperExpr`, and fallback paths in `Print`.
+
+Parse Package - parser_test.go (88.1% code coverage):
+    - `TestVarDeclarationParses`
+        - Input: `var a = 123;`
+        - Expected: Single `Var` statement with name `a` and literal initializer 123.
+    - `TestBinaryPrecedence`
+        - Input: `1 + 2 * 3;`
+        - Expected: AST with `*` having higher precedence, represented as
+            `(+ 1 (* 2 3))`.
+    *Additional coverage includes `expressionStatement`, `function`, and `block` parsing.*
+
+Resolver Package - resolver_test.go (83.1% code coverage):
+    - `TestReturnFromTopLevelIsError`
+        - Input: `return 123;`
+        - Expected: Resolver sets `HadError == true`
+    - `TestThisOutsideClassIsError`
+        - Input: `fun f() { print this; }`
+        - Expected: Resolver reports use of `this` outside class.
+    - `TestThisInsideClassIsOK`
+        - Input: Class with `this` in a method.
+        - Expected: No error.
+    - Plus additional tests for:
+        - Shadowed variables
+        - Superclass resolution
+        - Duplicate variable declarations
+        - Valid and invalid use of `super`.
+
+Interpreter Package - interpreter_test.go (86.1% code coverage):
+    - `TestArithmeticAndPrint`
+        - Input: `print 1 + 2 * 3;`
+        - Expected Output: `7`
+    - `TestFunctionAndClosure`
+        - Input: Function returning a closure and calling it repeatedly
+        - Expected Output: `1`, `2`, `3`
+    - `TestClassThisAndSuper`
+        - Input: Classes `A` and `B < A` with `super.method()` calls
+        - Expected Output: `B.method`, then `A.method`
+    - `TestUnaryBangAndMinus`, `TestComparisonsAndEquality`, `TestStringConcatenation`,
+        and runtime error cases (wrong operand types, calling non-callables, etc.)
+    - *Covers all major interpreter branches.*
+
+
+
+Stress Testing:
+All scripts are in /examples
+
+Scripts:
+    - features.lox: Exercises all basic Lox features end-to-end.
+    - control_flow.lox: Nested loops, if/else logic, summations.
+    - classes_inheritance.lox:Tests class behavior, inheritance, `super`, and field updates.
+    - functions.lox: Complex closure and recursion scenarios.
+    - errors.lox: Expected error cases for invalid `return` statements.
+        (Handled specially in Makefile to ignore non-zero exit codes.)

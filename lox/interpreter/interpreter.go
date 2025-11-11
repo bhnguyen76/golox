@@ -26,6 +26,8 @@ type Interpreter struct{
 
 func NewInterpreter() *Interpreter {
 	globals := NewEnvironment()
+	globals.Define("clock", ClockFn{})
+
 	return &Interpreter{
 		globals: globals,
 		environment: globals,
@@ -204,7 +206,7 @@ func (in *Interpreter) VisitCallExpr(expr *ast.Call) any {
 	if !ok {
 		panic(RuntimeError{
 			Token: expr.Paren,
-			Message: "Can only call functions and clsses.",
+			Message: "Can only call functions and classes.",
 		})
 	}
 

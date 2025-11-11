@@ -1,0 +1,18 @@
+// Stress testing recursion
+
+print "== Recursion depth test ==";
+
+fun countDown(n) {
+  if (n == 0) return 0;
+  return countDown(n - 1) + 1;
+}
+
+print countDown(50);   // 50
+print countDown(100);  // 100
+
+fun sumTo(n, acc) {
+  if (n == 0) return acc;
+  return sumTo(n - 1, acc + n);
+}
+
+print sumTo(100, 0);   // 5050

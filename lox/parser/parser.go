@@ -19,9 +19,9 @@ func (p *Parser) Parse() []ast.Stmt {
 	var statements []ast.Stmt
 
 	for !p.isAtEnd() {
-		stmt := p.statement()
-		if stmt != nil {
-			statements = append(statements, p.declaration())
+		stmt := p.declaration()
+		if stmt != nil { 
+			statements = append(statements, stmt)
 		}
 	}
 
@@ -420,7 +420,7 @@ func (p *Parser) previous() scanner.Token {
 func (p *Parser) comparison() ast.Expr {
 	expr := p.term()
 
-	for p.match(scanner.GREATER, scanner.EQUAL, scanner.LESS, scanner.LESS_EQUAL) {
+	for p.match(scanner.GREATER, scanner.GREATER_EQUAL, scanner.LESS, scanner.LESS_EQUAL) {
 		operator := p.previous()
 		right := p.term()
 		expr = &ast.Binary{
@@ -481,7 +481,7 @@ func (p *Parser) unary() ast.Expr {
 func (p *Parser) call() ast.Expr {
 	expr := p.primary()
 
-	for true {
+	for {
 		if p.match(scanner.LEFT_PAREN) {
 			expr = p.finishCall(expr)
 		} else if p.match(scanner.DOT) {

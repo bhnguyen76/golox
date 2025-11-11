@@ -21,5 +21,6 @@ func Report(line int, where string, message string) {
 }
 
 func ResetErrors() {
-	HadError = false
+    HadError = false
+    HadRuntimeError = false
 }
