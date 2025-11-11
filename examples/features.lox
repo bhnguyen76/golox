@@ -1,0 +1,124 @@
+// Generic Stress Tess for features
+
+print "== Basic arithmetic ==";
+print 1 + 2 * 3;          // 7
+print (1 + 2) * 3;        // 9
+print 10 / 4;             // 2.5
+print 5 - 8 + 2;          // -1
+print -(-3);              // 3
+
+print "== Comparisons and equality ==";
+print 3 > 2;              // true
+print 3 >= 3;             // true
+print 1 < 2;              // true
+print 2 <= 1;             // false
+print 1 == 1;             // true
+print 1 != 2;             // true
+print nil == nil;         // true
+print nil != 1;           // true
+
+print "== Booleans and ! ==";
+print !true;              // false
+print !false;             // true
+print !nil;               // true
+print !!"hi";             // true
+
+print "== Strings ==";
+print "hi " + "there";    // "hi there"
+
+print "== Variables and blocks ==";
+var a = 10;
+{
+  var a = 20;
+  print a;                // 20 (inner)
+}
+print a;                  // 10 (outer)
+
+print "== If / else ==";
+var x = 5;
+if (x > 3) {
+  print "x > 3";
+} else {
+  print "x <= 3";
+}
+
+if (false) print "no";
+else print "yes";         // yes
+
+print "== While loop ==";
+var i = 0;
+while (i < 5) {
+  print i;
+  i = i + 1;
+}
+
+print "== For loop desugaring (via parser) ==";
+for (var j = 0; j < 5; j = j + 1) {
+  print j;
+}
+
+print "== Functions and return ==";
+fun add(a, b) {
+  return a + b;
+}
+print add(2, 3);          // 5
+
+fun noReturn() {
+  var z = 10;
+}
+print noReturn();         // nil
+
+print "== Closures basics ==";
+fun makeAdder(n) {
+  fun addTo(x) {
+    return x + n;
+  }
+  return addTo;
+}
+var add10 = makeAdder(10);
+var add3 = makeAdder(3);
+print add10(5);           // 15
+print add3(5);            // 8
+
+print "== Classes and methods ==";
+class Foo {
+  init(x) {
+    this.x = x;
+  }
+
+  getX() {
+    return this.x;
+  }
+
+  setX(x) {
+    this.x = x;
+  }
+}
+
+var f = Foo(42);
+print f.getX();           // 42
+f.setX(99);
+print f.getX();           // 99
+
+print "== Inheritance and super ==";
+class A {
+  method() {
+    return "A.method";
+  }
+}
+
+class B < A {
+  method() {
+    return "B.method";
+  }
+
+  parent() {
+    return super.method();
+  }
+}
+
+var b = B();
+print b.method();         // "B.method"
+print b.parent();         // "A.method"
+
+print "== Done ==";

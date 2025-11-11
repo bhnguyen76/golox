@@ -1,0 +1,83 @@
+// Stress test classes/Inheritance
+
+print "== Class hierarchy test ==";
+
+class Animal {
+  init(name) {
+    this.name = name;
+  }
+
+  speak() {
+    return this.name + " makes a sound";
+  }
+}
+
+class Dog < Animal {
+  speak() {
+    return this.name + " barks";
+  }
+
+  parentSpeak() {
+    return super.speak();
+  }
+}
+
+class Cat < Animal {
+  speak() {
+    return this.name + " meows";
+  }
+}
+
+var d = Dog("Rex");
+var c = Cat("Mittens");
+
+print d.speak();        // "Rex barks"
+print d.parentSpeak();  // "Rex makes a sound"
+print c.speak();        // "Mittens meows"
+
+print "== Field stress: many fields ==";
+
+class Bag {
+  init() {
+    this.a = 1;
+    this.b = 2;
+    this.c = 3;
+    this.d = 4;
+    this.e = 5;
+  }
+
+  total() {
+    return this.a + this.b + this.c + this.d + this.e;
+  }
+}
+
+var bag = Bag();
+print bag.total(); // 15
+
+bag.a = 10;
+bag.e = 20;
+print bag.total(); // 10+2+3+4+20 = 39
+
+print "== Method calls in a loop ==";
+
+class Counter {
+  init() {
+    this.value = 0;
+  }
+
+  inc() {
+    this.value = this.value + 1;
+  }
+
+  get() {
+    return this.value;
+  }
+}
+
+var counter = Counter();
+var i = 0;
+while (i < 100) {
+  counter.inc();
+  i = i + 1;
+}
+print counter.get(); // 100

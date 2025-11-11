@@ -1,0 +1,22 @@
+// Stress test runetime errors
+var x = 123;
+x(); // runtime error: can only call functions and classes
+
+fun f(a, b) {
+  print a;
+  print b;
+}
+f(1); // runtime error: expected 2 arguments but got 1
+
+print notDefined; // runtime error: undefined variable
+
+var y = 10;
+y.foo = 20; // runtime error: only instances have fields (depending on your message)
+
+return 123; // resolver error: Can't return from top-level code.
+
+class Foo {
+  init() {
+    return 1; // resolver error: Can't return a value from an initializer.
+  }
+}

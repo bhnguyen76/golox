@@ -1,0 +1,51 @@
+// Stress tess flows like conditionals and loops
+
+print "== Sum with while (0..999) ==";
+var sum = 0;
+var i = 0;
+while (i < 1000) {
+  sum = sum + i;
+  i = i + 1;
+}
+print sum;  // 0+...+999 = 499500
+
+print "== Nested loops (small) ==";
+var outer = 0;
+var inner = 0;
+var total = 0;
+
+while (outer < 20) {
+  inner = 0;
+  while (inner < 10) {
+    total = total + outer + inner;
+    inner = inner + 1;
+  }
+  outer = outer + 1;
+}
+print total; // deterministic
+
+print "== Mixed if/else in loops ==";
+var k = 0;
+var positives = 0;
+var negatives = 0;
+
+while (k < 50) {
+  if (k < 25) {
+    positives = positives + 1;
+  } else {
+    negatives = negatives + 1;
+  }
+  k = k + 1;
+}
+print positives; // 25
+print negatives; // 25
+
+print "== for-loop counters ==";
+var evenCount = 0;
+for (var n = 0; n < 100; n = n + 1) {
+  if (n < 50 and n == 2 * (n / 2)) {
+    // crude "is even" using float / and equality
+    evenCount = evenCount + 1;
+  }
+}
+print evenCount; // about 25 (0,2,...,48)
